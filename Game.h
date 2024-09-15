@@ -3,6 +3,10 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
+#include <memory>
+#include <vector>
+#include "Mesh.h"
+
 class Game
 {
 public:
@@ -23,6 +27,12 @@ private:
 	// Initialization helper methods - feel free to customize, combine, remove, etc.
 	void LoadShaders();
 	void CreateGeometry();
+
+	//store all meshes here
+	std::vector<std::shared_ptr<Mesh>> meshes;
+	std::shared_ptr<Mesh> triangle;
+	std::shared_ptr<Mesh> square;
+	std::shared_ptr<Mesh> pentagon;
 
 	// Note the usage of ComPtr below
 	//  - This is a smart pointer for objects that abide by the
