@@ -19,9 +19,7 @@
 // For the DirectX Math library
 using namespace DirectX;
 
-bool isDemoWindowOn;
-XMFLOAT4 color(1.0f, 1.0f, 1.0f, 1.0f);
-int number;
+
 
 // --------------------------------------------------------
 // Called once per program, after the window and graphics API
@@ -40,6 +38,7 @@ void Game::Initialize()
 	//ImGui Info trackers
 	isDemoWindowOn = false;
 	number = 0;
+
 	
 
 	// Helper methods for loading shaders, creating some basic
@@ -69,6 +68,26 @@ void Game::Initialize()
 		Graphics::Context->VSSetShader(vertexShader.Get(), 0, 0);
 		Graphics::Context->PSSetShader(pixelShader.Get(), 0, 0);
 	}
+	
+	
+	//cbuffersizeinfo
+	unsigned int size = sizeof(VertexShaderData);
+	size = (size + 15) / 16 * 16;
+
+	//CBUFFER INFO
+	D3D11_BUFFER_DESC cbDesc	= {};
+	cbDesc.BindFlags			= D3D11_BIND_CONSTANT_BUFFER;
+	cbDesc.ByteWidth			= size;
+	cbDesc.CPUAccessFlags		= D3D11_CPU_ACCESS_WRITE;
+	cbDesc.Usage				= D3D11_USAGE_DYNAMIC;
+
+	Graphics::Device->CreateBuffer(&cbDesc, 0, vsConstBuffer.GetAddressOf());
+	
+	Graphics::Context->VSSetConstantBuffers(0, 1, vsConstBuffer.GetAddressOf());
+
+	//inital data tint and offset
+	vsData.colorTint = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	vsData.offset = XMFLOAT3(0.0f, 0.0f, 0.0f);
 }
 
 
@@ -248,28 +267,66 @@ void Game::Update(float deltaTime, float totalTime)
 	Input::SetMouseCapture(io.WantCaptureMouse);
 
 	//imgui custom window
-	ImGui::Begin("A2 Window");
-	//fps
-	ImGui::Text("Framerate: %f fps", ImGui::GetIO().Framerate);
-	//dimensions
-	ImGui::Text("Current window dimensions: %dx%d", Window::Height(), Window::Width());
-	//color picker
-	ImGui::ColorEdit4("RGBA color editor", &color.x);
-	//demohideshow
-	if (ImGui::Button("Show/Hide ImGui Demo Window")) {
-		isDemoWindowOn = !isDemoWindowOn;
-	}
-	if (isDemoWindowOn) {
-		ImGui::ShowDemoWindow();
+	ImGui::Begin("Settings");
+
+	ImGui::Spacing();
+
+	if (ImGui::TreeNode("Windows Info")) {
+
+		//fps
+		ImGui::Text("Framerate: %f fps", ImGui::GetIO().Framerate);
+		//dimensions
+		ImGui::Text("Current window dimensions: %dx%d", Window::Height(), Window::Width());
+		//color picker
+		ImGui::ColorEdit4("RGBA color editor", color);
+		//demohideshow
+		if (ImGui::Button("Show/Hide ImGui Demo Window")) {
+			isDemoWindowOn = !isDemoWindowOn;
+		}
+		if (isDemoWindowOn) {
+			ImGui::ShowDemoWindow();
+		}
+
+		ImGui::Text("Randomly Placed Slider");
+		ImGui::SliderInt("Choose a number", &number, 0, 100);
+		if (ImGui::Button("Press to ++")) {
+			number++;
+			if (number > 100) {
+				number--;
+			}
+		}
+
+		ImGui::TreePop();
 	}
 
-	ImGui::Text("Randomly Placed Slider");
-	ImGui::SliderInt("Choose a number", &number, 0, 100);
-	if (ImGui::Button("Press to ++")) {
-		number++;
-		if (number > 100) {
-			number--;
+	if (ImGui::TreeNode("Meshes")) {
+		for (int i = 0; i < meshes.size(); i++) {
+			ImGui::PushID(meshes[i].get());
+
+			if (ImGui::TreeNode("Mesh Node", "%i", i+1)) {
+				ImGui::Spacing();
+
+				ImGui::Text("Triangles: %d", meshes[i]->GetIndexCount() / 3);
+				ImGui::Text("Vertices: %d", meshes[i]->GetVertexCount());
+				ImGui::Text("Indices: %d", meshes[i]->GetIndexCount());
+
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
 		}
+
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("Tint and Offset")) {
+
+		ImGui::ColorEdit4("Color Tint", &vsData.colorTint.x);
+
+		ImGui::Spacing();
+
+		ImGui::DragFloat2("Offset", &vsData.offset.x, 0.01f); //using dragfloat2 instead of dragfloat3 because I wanna lock the z position
+
+		ImGui::TreePop();
 	}
 
 	ImGui::End();
@@ -290,9 +347,13 @@ void Game::Draw(float deltaTime, float totalTime)
 	// - At the beginning of Game::Draw() before drawing *anything*
 	{
 		// Clear the back buffer (erase what's on screen) and depth buffer
-		float winColor[4] = { color.x, color.y, color.z, color.w};
-		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(),	winColor);
+		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(),	color);
 		Graphics::Context->ClearDepthStencilView(Graphics::DepthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+		D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};
+		Graphics::Context->Map(vsConstBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedBuffer);
+		memcpy(mappedBuffer.pData, &vsData, sizeof(vsData));
+		Graphics::Context->Unmap(vsConstBuffer.Get(), 0);
 	}
 
 	//draw all new meshes here
