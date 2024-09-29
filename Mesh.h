@@ -12,10 +12,10 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> indexBfr;
 
 	//integer of how many indices
-	int indiceCount;
+	unsigned int indiceCount;
 
 	//iteger of how many vertices
-	int verticeCount;
+	unsigned int verticeCount;
 
 	//other useful data?
 

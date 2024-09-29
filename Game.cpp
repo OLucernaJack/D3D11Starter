@@ -85,9 +85,6 @@ void Game::Initialize()
 	
 	Graphics::Context->VSSetConstantBuffers(0, 1, vsConstBuffer.GetAddressOf());
 
-	//inital data tint and offset
-	vsData.colorTint = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	vsData.offset = XMFLOAT3(0.0f, 0.0f, 0.0f);
 }
 
 
@@ -190,7 +187,6 @@ void Game::CreateGeometry()
 	
 	//make all the new meshes here
 	//First Mesh (Triangle)
-	
 	Vertex triVerts[] =
 	{
 		{ XMFLOAT3(+0.0f, +0.25f, +0.0f), red },
@@ -201,42 +197,57 @@ void Game::CreateGeometry()
 	{ 
 		0, 1, 2 
 	};
-	triangle = std::make_shared<Mesh>(triVerts, triInds, ARRAYSIZE(triInds), ARRAYSIZE(triVerts));
+	std::shared_ptr<Mesh> triangle = std::make_shared<Mesh>(triVerts, triInds, ARRAYSIZE(triInds), ARRAYSIZE(triVerts));
 	meshes.push_back(triangle);
 
-	//Second Mesh 
 	
-	Vertex squVerts[] = {
-		{ XMFLOAT3(-0.5f, -0.5f, +0.0f), red },
-		{ XMFLOAT3(-0.9f, -0.5f, +0.0f), blue },
-		{ XMFLOAT3(-0.9f, -0.9f, +0.0f), blue },
-		{ XMFLOAT3(-0.5f, -0.9f, +0.0f), blue }
-	};
-	unsigned int squInds[] = //i accidentally made the square backwards
-	{
-		2,1,0,
-		3,2,0
-	};
-	square = std::make_shared<Mesh>(squVerts, squInds, ARRAYSIZE(squInds), ARRAYSIZE(squVerts));
-	meshes.push_back(square);
 	
-	//Third Mesh
 
+	//Second Mesh 
+	Vertex squVerts[] = {
+		{ XMFLOAT3(-0.1f, +0.1f, +0.0f), red },
+		{ XMFLOAT3(0.1f, 0.1f, +0.0f), blue },
+		{ XMFLOAT3(0.1f, -0.1f, +0.0f), blue },
+		{ XMFLOAT3(-0.1f, -0.1f, +0.0f), blue }
+	};
+	unsigned int squInds[] = 
+	{
+		0, 1, 2,
+		0, 2, 3
+	};
+	std::shared_ptr<Mesh> square = std::make_shared<Mesh>(squVerts, squInds, ARRAYSIZE(squInds), ARRAYSIZE(squVerts));
+	meshes.push_back(square);
+
+
+	//Third Mesh
 	Vertex pentVerts[] = {
-		{ XMFLOAT3(+0.4f, +0.8f, +0.0f), green },
-		{ XMFLOAT3(+0.6f, +0.6f, +0.0f), blue },
-		{ XMFLOAT3(+0.5f, +0.4f, +0.0f), green },
-		{ XMFLOAT3(+0.3f, +0.4f, +0.0f), green },
-		{ XMFLOAT3(+0.2f, +0.6f, +0.0f), blue }
+		{ XMFLOAT3(+0.0f, +0.2f, +0.0f), green },
+		{ XMFLOAT3(+0.15f, +0.1f, +0.0f), blue },
+		{ XMFLOAT3(+0.1f, -0.1f, +0.0f), green },
+		{ XMFLOAT3(-0.1f, -0.1f, +0.0f), green },
+		{ XMFLOAT3(-0.15f, +0.1f, +0.0f), blue }
 	};
 	unsigned int pentInds[] = {
 		0,1,2,
 		0,2,3,
 		0,3,4,
 	};
-	pentagon = std::make_shared<Mesh>(pentVerts, pentInds, ARRAYSIZE(pentInds), ARRAYSIZE(pentVerts));
+	std::shared_ptr<Mesh> pentagon = std::make_shared<Mesh>(pentVerts, pentInds, ARRAYSIZE(pentInds), ARRAYSIZE(pentVerts));
 	meshes.push_back(pentagon);
-	
+
+
+	//make de entities
+	std::shared_ptr<Entity> entity1 = std::make_shared<Entity>(triangle);
+	std::shared_ptr<Entity> entity2 = std::make_shared<Entity>(square);
+	std::shared_ptr<Entity> entity3 = std::make_shared<Entity>(pentagon);
+	std::shared_ptr<Entity> entity4 = std::make_shared<Entity>(pentagon);
+	std::shared_ptr<Entity> entity5 = std::make_shared<Entity>(pentagon);
+
+	entities.push_back(entity1);
+	entities.push_back(entity2);
+	entities.push_back(entity3);
+	entities.push_back(entity4);
+	entities.push_back(entity5);
 }
 
 
@@ -299,16 +310,35 @@ void Game::Update(float deltaTime, float totalTime)
 		ImGui::TreePop();
 	}
 
-	if (ImGui::TreeNode("Meshes")) {
-		for (int i = 0; i < meshes.size(); i++) {
-			ImGui::PushID(meshes[i].get());
+	if (ImGui::TreeNode("Entity Info")) {
 
-			if (ImGui::TreeNode("Mesh Node", "%i", i+1)) {
-				ImGui::Spacing();
+		for (int i = 0; i < entities.size() - 2; i++) {
+			ImGui::PushID(entities[i].get());
 
+			if (ImGui::TreeNode("Entity", "Entity %d", i)) {
 				ImGui::Text("Triangles: %d", meshes[i]->GetIndexCount() / 3);
 				ImGui::Text("Vertices: %d", meshes[i]->GetVertexCount());
 				ImGui::Text("Indices: %d", meshes[i]->GetIndexCount());
+
+				ImGui::Spacing();
+				ImGui::Spacing();
+				ImGui::Text("CONTROLS: ");
+
+				//get entity info
+				std::shared_ptr<Transform> tr = entities[i]->GetTransform();
+				XMFLOAT3 pos = tr->GetPosition();
+				XMFLOAT3 rot = tr->GetPitchYawRoll();
+				XMFLOAT3 sc = tr->GetScale();
+				
+				// pos
+				if (ImGui::DragFloat2("Position", &pos.x, 0.01f))
+					tr->SetPosition(pos);
+				// rot
+				if (ImGui::DragFloat3("Rotation", &rot.x, 0.01f))
+					tr->SetRotation(rot);
+				// sc
+				if (ImGui::DragFloat2("Scale", &sc.x, 0.01f))
+					tr->SetScale(sc);
 
 				ImGui::TreePop();
 			}
@@ -318,18 +348,18 @@ void Game::Update(float deltaTime, float totalTime)
 		ImGui::TreePop();
 	}
 
-	if (ImGui::TreeNode("Tint and Offset")) {
-
-		ImGui::ColorEdit4("Color Tint", &vsData.colorTint.x);
-
-		ImGui::Spacing();
-
-		ImGui::DragFloat2("Offset", &vsData.offset.x, 0.01f); //using dragfloat2 instead of dragfloat3 because I wanna lock the z position
-
-		ImGui::TreePop();
-	}
-
 	ImGui::End();
+
+
+	//automated moving of two shapes
+	float scale = cos(totalTime);
+	float move = sin(totalTime);
+
+	entities[3]->GetTransform()->SetScale(scale, scale, scale);
+	entities[3]->GetTransform()->Rotate(0, 0, sin(deltaTime));
+	entities[3]->GetTransform()->SetPosition(move, 0, 0);
+
+	entities[4]->GetTransform()->SetPosition(move, -move, 0);
 
 	// Example input checking: Quit if the escape key is pressed
 	if (Input::KeyDown(VK_ESCAPE))
@@ -349,19 +379,13 @@ void Game::Draw(float deltaTime, float totalTime)
 		// Clear the back buffer (erase what's on screen) and depth buffer
 		Graphics::Context->ClearRenderTargetView(Graphics::BackBufferRTV.Get(),	color);
 		Graphics::Context->ClearDepthStencilView(Graphics::DepthBufferDSV.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-		D3D11_MAPPED_SUBRESOURCE mappedBuffer = {};
-		Graphics::Context->Map(vsConstBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedBuffer);
-		memcpy(mappedBuffer.pData, &vsData, sizeof(vsData));
-		Graphics::Context->Unmap(vsConstBuffer.Get(), 0);
 	}
 
-	//draw all new meshes here
-	{
-		for (std::shared_ptr<Mesh> mesh : meshes) {
-			mesh->Draw();
-		}
+	
+	for (std::shared_ptr<Entity> entity : entities) {
+		entity->Draw(vsConstBuffer);
 	}
+	
 
 	// Frame END
 	// - These should happen exactly ONCE PER FRAME

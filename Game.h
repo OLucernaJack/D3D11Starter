@@ -7,6 +7,7 @@
 #include <vector>
 #include "Mesh.h"
 #include "BufferStructs.h"
+#include "Entity.h"
 
 class Game
 {
@@ -36,9 +37,7 @@ private:
 
 	//store all meshes here
 	std::vector<std::shared_ptr<Mesh>> meshes;
-	std::shared_ptr<Mesh> triangle;
-	std::shared_ptr<Mesh> square;
-	std::shared_ptr<Mesh> pentagon;
+	std::vector<std::shared_ptr<Entity>> entities;
 
 	//vsData here
 	VertexShaderData vsData;
